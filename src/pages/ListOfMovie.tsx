@@ -7,8 +7,7 @@ import {
   useMovies,
   useGenres,
   useIsLoading,
-  fetchNewFilms,
-  fetchInitialData,
+  useMovieActions,
 } from "@/features/movieStore";
 import { Spinner } from "@/shared/components/ui/spinner";
 
@@ -19,14 +18,14 @@ const ListOfMovie = () => {
   const movies = useMovies();
   const genres = useGenres();
   const isLoading = useIsLoading();
+  const { loadPages, fetchInitialData } = useMovieActions();
 
   useEffect(() => {
     const fn = async () => {
       await fetchInitialData();
     };
-
     fn();
-  }, []);
+  }, [fetchInitialData]);
 
   if (isLoading) return <Spinner className="size-16" />;
 
@@ -46,8 +45,11 @@ const ListOfMovie = () => {
   };
 
   return (
-    <div className="flex justify-center items-center flex-wrap  w-[1200px] p-4">
+    <div className="flex justify-center flex-col items-center flex-wrap  w-[1200px] p-4">
       <div className="flex flex-wrap justify-center gap-[10px] mb-10">
+        {movies.length === 0 && (
+          <strong>There are no films in this genre.</strong>
+        )}
         {movies.map((movie) => {
           return (
             <div key={movie.id}>
@@ -87,9 +89,13 @@ const ListOfMovie = () => {
         })}
       </div>
       <div>
-        <Button className="cursor-pointer" onClick={() => fetchNewFilms()}>
-          Load more
-        </Button>
+        {movies.length === 0 ? (
+          ""
+        ) : (
+          <Button className="cursor-pointer" onClick={loadPages}>
+            Load more
+          </Button>
+        )}
       </div>
       {chosenFilm && (
         <DialogModal

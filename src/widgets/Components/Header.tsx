@@ -32,11 +32,14 @@ const Header = () => {
             setGenreFilter(value ? Number(value) : null)
           }
         >
+          <DropdownMenuRadioItem value={""} className="hover:text-black">
+            <strong>All genres</strong>
+          </DropdownMenuRadioItem>
           {genres.map((elem) => {
             return (
               <DropdownMenuRadioItem
-                key={elem.name}
-                value={elem.name}
+                key={elem.id}
+                value={elem.id.toString()}
                 className="hover:text-black"
               >
                 <strong>{elem.name}</strong>
@@ -60,7 +63,7 @@ const Header = () => {
               value="high rated"
               className="hover:text-black"
             >
-              <strong>Hight rated</strong>
+              <strong>High rated</strong>
             </DropdownMenuRadioItem>
             <DropdownMenuRadioItem
               value="low rated"

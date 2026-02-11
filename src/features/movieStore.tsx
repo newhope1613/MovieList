@@ -1,7 +1,8 @@
 import api from "@/shared/api/api";
-import type { GenreResponse, GenreType, MovieType } from "@/shared/types/types";
+import type { GenreType, MovieType } from "@/shared/types/types";
 import { create, type StateCreator } from "zustand";
 import { createJSONStorage, devtools, persist } from "zustand/middleware";
+import { useShallow } from "zustand/react/shallow";
 
 interface IActions {
   fetchMovies: () => Promise<void>;
@@ -9,6 +10,11 @@ interface IActions {
   fetchInitialData: () => Promise<void>;
   setRatingFilter: (filter: RatingFilterType) => void;
   setGenreFilter: (filter: number | null) => void;
+  applyFiltersAndSort: (
+    allMovies: MovieType[],
+    genreId: number | null,
+    rating: RatingFilterType,
+  ) => MovieType[];
   loadPages: () => void;
   sortMovies: (movies: MovieType[], filter: RatingFilterType) => MovieType[];
 }
@@ -16,6 +22,7 @@ interface IActions {
 export type RatingFilterType = "high rated" | "low rated";
 
 interface IInitialState {
+  allMovies: MovieType[];
   movies: MovieType[];
   genres: GenreType[];
   isLoading: boolean;
@@ -27,6 +34,7 @@ interface IInitialState {
 interface IMovieState extends IInitialState, IActions {}
 
 const initialState: IInitialState = {
+  allMovies: [],
   movies: [],
   genres: [],
   isLoading: false,
@@ -38,34 +46,18 @@ const initialState: IInitialState = {
 const movieStore: StateCreator<IMovieState> = (set, get) => ({
   ...initialState,
 
-  fetchMovies: async () => {
-    try {
-      const response = await api.get<{ results: MovieType[] }>(
-        "/movie/popular?page=1",
-      );
-      const fetchedMovies = response.data.results;
+  applyFiltersAndSort: (allMovies, genreId, rating) => {
+    console.log("Filtering by:", genreId);
+    let result = [...allMovies];
 
-      const currentFilter = get().ratingFilter;
-      const sortedMovies = get().sortMovies(fetchedMovies, currentFilter);
-
-      set({ movies: sortedMovies });
-    } catch (e) {
-      console.error("Error fetching movies:", e);
-      set({ movies: [] });
+    if (genreId !== null) {
+      result = result.filter((movie) => movie.genre_ids.includes(genreId));
     }
+
+    return get().sortMovies(result, rating);
   },
 
-  fetchGenres: async () => {
-    try {
-      const response = await api.get<GenreResponse>("/genre/movie/list");
-      set({ genres: response.data.genres });
-    } catch (e) {
-      console.error("Error fetching genres:", e);
-      set({ genres: [] });
-    }
-  },
-
-  sortMovies: (movies: MovieType[], filter: RatingFilterType) => {
+  sortMovies: (movies, filter) => {
     return [...movies].sort((a, b) =>
       filter === "high rated"
         ? b.vote_average - a.vote_average
@@ -73,39 +65,64 @@ const movieStore: StateCreator<IMovieState> = (set, get) => ({
     );
   },
 
-  filterMovies: (movies: MovieType[], filter: number | null) => {
-    movies.filter((elem) => elem.genre_ids[0] != filter);
+  fetchMovies: async () => {
+    try {
+      const response = await api.get<{ results: MovieType[] }>(
+        "/movie/popular?page=1",
+      );
+      const fetchedMovies = response.data.results;
+      const { ratingFilter, genreFilter, applyFiltersAndSort } = get();
+
+      set({
+        allMovies: fetchedMovies,
+        movies: applyFiltersAndSort(fetchedMovies, genreFilter, ratingFilter),
+      });
+    } catch (e) {
+      console.error("Error fetching movies:", e);
+    }
+  },
+
+  fetchGenres: async () => {
+    try {
+      const response = await api.get<{ genres: GenreType[] }>(
+        "/genre/movie/list",
+      );
+      set({ genres: response.data.genres });
+    } catch (e) {
+      console.error("Error fetching genres:", e);
+    }
+  },
+
+  setGenreFilter: (filterId) => {
+    const { allMovies, ratingFilter, applyFiltersAndSort } = get();
+    set({
+      genreFilter: filterId,
+      movies: applyFiltersAndSort(allMovies, filterId, ratingFilter),
+    });
+  },
+
+  setRatingFilter: (filter) => {
+    const { allMovies, genreFilter, applyFiltersAndSort } = get();
+    set({
+      ratingFilter: filter,
+      movies: applyFiltersAndSort(allMovies, genreFilter, filter),
+    });
   },
 
   fetchInitialData: async () => {
+    if (get().isLoading) return;
+
     set({ isLoading: true });
     try {
       await Promise.all([get().fetchMovies(), get().fetchGenres()]);
-    } catch (e) {
-      console.error(e);
     } finally {
       set({ isLoading: false });
     }
   },
 
-  setRatingFilter: (filter) => {
-    const { movies, sortMovies } = get();
-    const sortedMovies = sortMovies(movies, filter);
-
-    set({
-      ratingFilter: filter,
-      movies: sortedMovies,
-    });
-  },
-
-  setGenreFilter: (filterId: number | null) => {
-    // const { movies } = get();
-
-    set({ genreFilter: filterId });
-  },
-
   loadPages: async () => {
-    const { pages, movies, ratingFilter, sortMovies } = get();
+    const { pages, allMovies, ratingFilter, genreFilter, applyFiltersAndSort } =
+      get();
     const nextPage = pages + 1;
 
     try {
@@ -115,16 +132,17 @@ const movieStore: StateCreator<IMovieState> = (set, get) => ({
       );
       const newMovies = response.data.results;
 
-      const movieMap = new Map(movies.map((m) => [m.id, m]));
-
+      const movieMap = new Map(allMovies.map((m) => [m.id, m]));
       newMovies.forEach((m) => movieMap.set(m.id, m));
-
-      const uniqueMoviesArray = Array.from(movieMap.values());
-
-      const updatedMovies = sortMovies(uniqueMoviesArray, ratingFilter);
+      const updatedAllMovies = Array.from(movieMap.values());
 
       set({
-        movies: updatedMovies,
+        allMovies: updatedAllMovies,
+        movies: applyFiltersAndSort(
+          updatedAllMovies,
+          genreFilter,
+          ratingFilter,
+        ),
         pages: nextPage,
       });
     } catch (e) {
@@ -159,7 +177,13 @@ export const useSetGenreFilter = () =>
   useMovieStore((state) => state.setGenreFilter);
 
 //fetching
-export const fetchMovies = useMovieStore.getState().fetchMovies;
-export const fetchGenres = useMovieStore.getState().fetchGenres;
-export const fetchInitialData = useMovieStore.getState().fetchInitialData;
-export const fetchNewFilms = useMovieStore.getState().loadPages;
+export const useMovieActions = () => {
+  return useMovieStore(
+    useShallow((state) => ({
+      fetchInitialData: state.fetchInitialData,
+      loadPages: state.loadPages,
+      setGenreFilter: state.setGenreFilter,
+      setRatingFilter: state.setRatingFilter,
+    })),
+  );
+};
