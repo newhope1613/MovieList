@@ -14,7 +14,7 @@ Frontend: React 18 (TypeScript)
 State Management: Zustand
 API: TMDB REST API
 
-**Архитектура и реализация**
+**Архитектура и реализация:**
 При разработке я сделал упор на чистоту кода и масштабируемость:
 
 Модульная структура: Проект разделен по принципам, близким к FSD (Feature-Sliced Design). Выделены слои pages, features, widgets и shared. Это упрощает поддержку и навигацию по коду.

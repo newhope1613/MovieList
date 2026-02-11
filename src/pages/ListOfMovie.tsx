@@ -74,7 +74,7 @@ const ListOfMovie = () => {
                       </p>
                     </div>
                   </div>
-                  <div>
+                  <div className="self-center">
                     <Button
                       className="mt-2 cursor-pointer"
                       onClick={() => dialogFilm(movie.id)}
