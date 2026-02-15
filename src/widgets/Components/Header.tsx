@@ -27,6 +27,7 @@ const Header = () => {
 
       <div className="text-current pr-8 pt-5 sm:pr-16 pt-10">
         <DropDown
+          name="Genres"
           value={genreFilter?.toString() || ""}
           onValueChange={(value) =>
             setGenreFilter(value ? Number(value) : null)
@@ -49,6 +50,7 @@ const Header = () => {
         </DropDown>
 
         <DropDown
+          name="Sort"
           value={ratingFilter}
           onValueChange={(value) => setRatingFilter(value as RatingFilterType)}
         >

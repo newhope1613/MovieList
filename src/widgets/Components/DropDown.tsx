@@ -10,10 +10,11 @@ import {
 type DropdownType = {
   value: string;
   onValueChange: (a: string) => void;
+  name: string;
   children: React.ReactNode;
 };
 
-const Dropdown = ({ value, onValueChange, children }: DropdownType) => {
+const Dropdown = ({ value, onValueChange, name, children }: DropdownType) => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild className="cursor-pointer">
@@ -21,7 +22,7 @@ const Dropdown = ({ value, onValueChange, children }: DropdownType) => {
           variant="ghost"
           className="outline-none focus-visible:ring-0 focus-visible:ring-offset-0 underline"
         >
-          Genre
+          {name}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-32 cursor-pointer" sideOffset={15}>
